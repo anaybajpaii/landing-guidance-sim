@@ -71,3 +71,6 @@ build/
 
 # Simulation output
 data/*.csv
+
+# VS Code
+/.vscode 
