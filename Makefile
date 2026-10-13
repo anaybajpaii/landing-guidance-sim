@@ -1,17 +1,22 @@
 CXX         = g++
 CXXFLAGS    = -std=c++17 -Wall -Wextra -O2
 SRC         = src/main.cpp src/lander.cpp src/logger.cpp
-HDR         = src/params.hpp src/lander.hpp src/logger.hpp
+HDR         = src/params.hpp src/lander.hpp src/logger.hpp src/guidance.hpp
 TARGET      = build/lander.exe
-TEST_TARGET = build/test_physics.exe
+PHYS_TEST   = build/test_physics.exe
+GUIDE_TEST  = build/test_guidance.exe
 
 all: $(TARGET)
 
 $(TARGET): $(SRC) $(HDR)
 	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
 
-test: $(TEST_TARGET)
-	./$(TEST_TARGET)
+test: $(PHYS_TEST) $(GUIDE_TEST)
+	./$(PHYS_TEST)
+	./$(GUIDE_TEST)
 
-$(TEST_TARGET): tests/test_physics.cpp src/lander.cpp $(HDR)
-	$(CXX) $(CXXFLAGS) -Isrc tests/test_physics.cpp src/lander.cpp -o $(TEST_TARGET)
+$(PHYS_TEST): tests/test_physics.cpp src/lander.cpp $(HDR)
+	$(CXX) $(CXXFLAGS) -Isrc tests/test_physics.cpp src/lander.cpp -o $(PHYS_TEST)
+
+$(GUIDE_TEST): tests/test_guidance.cpp src/guidance.cpp $(HDR)
+	$(CXX) $(CXXFLAGS) -Isrc tests/test_guidance.cpp src/guidance.cpp -o $(GUIDE_TEST)
