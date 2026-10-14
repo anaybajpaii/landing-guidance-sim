@@ -3,10 +3,14 @@
 #include "params.hpp"
 #include "lander.hpp"
 #include "logger.hpp"
+#include "guidance.hpp"
+#include "controller.hpp"
 
 int main() {
     Params p;
     Lander lander(p);
+    ConstantDecel guidance(p);
+    Controller controller(p);
 
     DataLogger logger(p.output_file);
     if (!logger.isOpen()) {
@@ -17,7 +21,9 @@ int main() {
 
     logger.log(lander.state(), lander.mass());
     while (!lander.onGround() && lander.state().t < p.max_time) {
-        lander.step(0.0, 0.0);
+        const double desired_vy = guidance.desiredVy(lander.state(), lander.mass());
+        const double throttle = controller.throttle(lander.state(), lander.mass(), desired_vy);
+        lander.step(throttle, 0.0);
         logger.log(lander.state(), lander.mass());
     }
 

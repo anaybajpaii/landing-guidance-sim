@@ -1,7 +1,6 @@
 CXX         = g++
 CXXFLAGS    = -std=c++17 -Wall -Wextra -O2
-SRC         = src/main.cpp src/lander.cpp src/logger.cpp
-HDR         = src/params.hpp src/lander.hpp src/logger.hpp src/guidance.hpp src/pid.hpp src/controller.hpp
+SRC         = src/main.cpp src/lander.cpp src/logger.cpp src/guidance.cpp src/pid.cpp src/controller.cpp
 TARGET      = build/lander.exe
 PHYS_TEST   = build/test_physics.exe
 GUIDE_TEST  = build/test_guidance.exe
