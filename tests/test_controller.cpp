@@ -101,6 +101,21 @@ void testIntegral() {
     check(later > first, "integral: a persistent small error slowly raises the throttle");
 }
 
+void testResetWhenOff() {
+    Params p;
+    Controller c(p);
+    LanderState s;
+    s.vy = -10.0;
+    for (int i = 0; i < 500; ++i) {
+        c.throttle(s, 1300.0, -50.0);
+    }
+    const double after_coast = c.throttle(s, 1300.0, -9.9);
+
+    Controller fresh(p);
+    const double from_fresh = fresh.throttle(s, 1300.0, -9.9);
+    check(near(after_coast, from_fresh, 1e-12), "engine off clears the PID");
+}
+
 }
 
 int main() {
@@ -110,6 +125,7 @@ int main() {
     testMinThrottle();
     testDirection();
     testIntegral();
+    testResetWhenOff();
 
     std::cout << "\n" << passed << " passed, " << failed << " failed\n";
     return failed > 0 ? 1 : 0;

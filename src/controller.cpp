@@ -15,6 +15,7 @@ double Controller::throttle(const LanderState& s, double mass, double desired_vy
     const double needed = thrust / params_.max_thrust;
 
     if (needed < 0.5 * params_.min_throttle) {
+        vertical_.reset();
         return 0.0;
     }
     return std::clamp(needed, params_.min_throttle, 1.0);

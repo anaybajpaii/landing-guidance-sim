@@ -16,3 +16,12 @@ public:
 private:
     Params params_;
 };
+
+class LateBurn : public Guidance {
+public:
+    explicit LateBurn(const Params& params);
+    double desiredVy(const LanderState& s, double mass) const override;
+
+private:
+    Params params_;
+};

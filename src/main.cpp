@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include "params.hpp"
 #include "lander.hpp"
 #include "logger.hpp"
@@ -9,7 +10,12 @@
 int main() {
     Params p;
     Lander lander(p);
-    ConstantDecel guidance(p);
+    std::unique_ptr<Guidance> guidance;
+    if (p.guidance == GuidanceType::LateBurn) {
+        guidance = std::make_unique<LateBurn>(p);
+    } else {
+        guidance = std::make_unique<ConstantDecel>(p);
+    }
     Controller controller(p);
 
     DataLogger logger(p.output_file);
@@ -21,7 +27,7 @@ int main() {
 
     logger.log(lander.state(), lander.mass());
     while (!lander.onGround() && lander.state().t < p.max_time) {
-        const double desired_vy = guidance.desiredVy(lander.state(), lander.mass());
+        const double desired_vy = guidance->desiredVy(lander.state(), lander.mass());
         const double throttle = controller.throttle(lander.state(), lander.mass(), desired_vy);
         lander.step(throttle, 0.0);
         logger.log(lander.state(), lander.mass());
