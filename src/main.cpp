@@ -28,8 +28,8 @@ int main() {
     logger.log(lander.state(), lander.mass());
     while (!lander.onGround() && lander.state().t < p.max_time) {
         const double desired_vy = guidance->desiredVy(lander.state(), lander.mass());
-        const double throttle = controller.throttle(lander.state(), lander.mass(), desired_vy);
-        lander.step(throttle, 0.0);
+        const Command cmd = controller.command(lander.state(), lander.mass(), desired_vy);
+        lander.step(cmd.throttle, cmd.tilt);
         logger.log(lander.state(), lander.mass());
     }
 

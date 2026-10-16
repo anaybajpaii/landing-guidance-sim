@@ -17,7 +17,7 @@ struct Params {
     double max_tilt_deg = 20.0;
 
     double init_altitude = 500.0;
-    double init_x = 100.0;
+    double init_x = 50.0;
     double init_vy = -40.0;
     double init_vx = 0.0;
 
@@ -30,7 +30,7 @@ struct Params {
     double ki_vert = 0.2;
     double kd_vert = 0.1;
 
-    double kp_pos = 0.1;
+    double kp_pos = 0.3;
     double max_vx_cmd = 5.0;
     double kp_horiz = 1.0;
     double ki_horiz = 0.0;

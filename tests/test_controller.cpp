@@ -34,7 +34,7 @@ double throttleFor(const Params& p, double mass, double error) {
     Controller c(p);
     LanderState s;
     s.vy = 0.0;
-    return c.throttle(s, mass, error);
+    return c.command(s, mass, error).throttle;
 }
 
 void testBasics() {
@@ -76,13 +76,13 @@ void testDirection() {
     {
         Controller c(p);
         s.vy = -40.0;
-        check(near(c.throttle(s, 1300.0, -31.6), 1.0, 1e-12),
+        check(near(c.command(s, 1300.0, -31.6).throttle, 1.0, 1e-12),
               "direction: falling much faster than the curve gives full throttle");
     }
     {
         Controller c(p);
         s.vy = -20.0;
-        check(near(c.throttle(s, 1300.0, -31.6), 0.0, 1e-12),
+        check(near(c.command(s, 1300.0, -31.6).throttle, 0.0, 1e-12),
               "direction: falling much slower than the curve turns the engine off");
     }
 }
@@ -93,10 +93,10 @@ void testIntegral() {
     LanderState s;
     s.vy = -10.0;
 
-    const double first = c.throttle(s, 1300.0, -9.9);
+    const double first = c.command(s, 1300.0, -9.9).throttle;
     double later = first;
     for (int i = 0; i < 100; ++i) {
-        later = c.throttle(s, 1300.0, -9.9);
+        later = c.command(s, 1300.0, -9.9).throttle;
     }
     check(later > first, "integral: a persistent small error slowly raises the throttle");
 }
@@ -107,13 +107,61 @@ void testResetWhenOff() {
     LanderState s;
     s.vy = -10.0;
     for (int i = 0; i < 500; ++i) {
-        c.throttle(s, 1300.0, -50.0);
+        c.command(s, 1300.0, -50.0);
     }
-    const double after_coast = c.throttle(s, 1300.0, -9.9);
+    const double after_coast = c.command(s, 1300.0, -9.9).throttle;
 
     Controller fresh(p);
-    const double from_fresh = fresh.throttle(s, 1300.0, -9.9);
+    const double from_fresh = fresh.command(s, 1300.0, -9.9).throttle;
     check(near(after_coast, from_fresh, 1e-12), "engine off clears the PID");
+}
+
+void testTiltDirection() {
+    Params p;
+    LanderState s;
+    s.vy = -10.0;
+
+    {
+        Controller c(p);
+        s.x = 50.0;
+        check(c.command(s, 1300.0, -10.0).tilt < 0.0,
+              "tilt: pad is toward -x, so the thrust leans toward -x");
+    }
+    {
+        Controller c(p);
+        s.x = -50.0;
+        check(c.command(s, 1300.0, -10.0).tilt > 0.0,
+              "tilt: pad is toward +x, so the thrust leans toward +x");
+    }
+    {
+        Controller c(p);
+        s.x = 0.0;
+        check(near(c.command(s, 1300.0, -10.0).tilt, 0.0, 1e-12),
+              "tilt: on the pad and not moving sideways means no tilt");
+    }
+}
+
+void testTiltLimit() {
+    const double pi = 3.14159265358979323846;
+    const Params p = simpleGains();
+    const double max_tilt = p.max_tilt_deg * pi / 180.0;
+
+    Controller c(p);
+    LanderState s;
+    s.x = 1000.0;
+    const Command cmd = c.command(s, 1000.0, 0.0);
+    check(near(cmd.tilt, -max_tilt, 1e-9), "tilt: a huge offset is limited to max_tilt_deg");
+    check(near(cmd.throttle, 0.27 / std::cos(max_tilt), 1e-9),
+          "tilt: throttle is raised by 1/cos(tilt) to keep the vertical thrust");
+}
+
+void testEngineOffNoTilt() {
+    Controller c(simpleGains());
+    LanderState s;
+    s.x = 1000.0;
+    const Command cmd = c.command(s, 1000.0, -10.0);
+    check(near(cmd.throttle, 0.0, 1e-12) && near(cmd.tilt, 0.0, 1e-12),
+          "engine off: no throttle and no tilt");
 }
 
 }
@@ -126,6 +174,9 @@ int main() {
     testDirection();
     testIntegral();
     testResetWhenOff();
+    testTiltDirection();
+    testTiltLimit();
+    testEngineOffNoTilt();
 
     std::cout << "\n" << passed << " passed, " << failed << " failed\n";
     return failed > 0 ? 1 : 0;
