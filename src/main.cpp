@@ -6,6 +6,7 @@
 #include "logger.hpp"
 #include "guidance.hpp"
 #include "controller.hpp"
+#include "touchdown.hpp"
 
 int main() {
     Params p;
@@ -25,29 +26,37 @@ int main() {
         return 1;
     }
 
+    LanderState previous = lander.state();
     logger.log(lander.state(), lander.mass());
     while (!lander.onGround() && lander.state().t < p.max_time) {
         const double desired_vy = guidance->desiredVy(lander.state(), lander.mass());
         const Command cmd = controller.command(lander.state(), lander.mass(), desired_vy);
+        previous = lander.state();
         lander.step(cmd.throttle, cmd.tilt);
         logger.log(lander.state(), lander.mass());
     }
 
-    const LanderState& s = lander.state();
+    const TouchdownResult r = evaluateTouchdown(previous, lander.state(), p);
 
     std::cout << std::fixed << std::setprecision(2);
-    if (lander.onGround()) {
-        std::cout << "Touchdown\n";
+    if (!r.landed) {
+        std::cout << "Result: FAIL (did not touch down before max_time)\n";
+    } else if (r.success) {
+        std::cout << "Result: SUCCESS\n";
     } else {
-        std::cout << "Timed out before touchdown\n";
+        std::cout << "Result: FAIL\n";
     }
-    std::cout << "time:             " << s.t << " s\n";
-    std::cout << "altitude:         " << s.y << " m\n";
-    std::cout << "vertical speed:   " << s.vy << " m/s\n";
-    std::cout << "horizontal speed: " << s.vx << " m/s\n";
-    std::cout << "horizontal error: " << s.x << " m\n";
-    std::cout << "fuel used:        " << p.fuel_mass - s.fuel << " kg\n";
-    std::cout << "log written to:   " << p.output_file << "\n";
+    std::cout << "time:           " << r.time << " s\n";
+    if (r.landed) {
+        std::cout << "landing speed:  " << r.vertical_speed << " m/s (limit "
+                  << p.max_land_speed << ")" << (r.speed_ok ? "" : "  <-- too fast") << "\n";
+        std::cout << "sideways speed: " << r.horizontal_speed << " m/s (limit "
+                  << p.max_land_vx << ")" << (r.sideways_ok ? "" : "  <-- too fast") << "\n";
+        std::cout << "miss distance:  " << r.miss_distance << " m (limit "
+                  << p.max_land_dx << ")" << (r.position_ok ? "" : "  <-- too far") << "\n";
+    }
+    std::cout << "fuel used:      " << r.fuel_used << " kg\n";
+    std::cout << "log written to: " << p.output_file << "\n";
 
     return 0;
 }
