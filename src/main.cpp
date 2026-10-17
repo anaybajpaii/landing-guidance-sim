@@ -1,15 +1,30 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <string>
+#include <vector>
 #include "params.hpp"
+#include "config.hpp"
 #include "lander.hpp"
 #include "logger.hpp"
 #include "guidance.hpp"
 #include "controller.hpp"
 #include "touchdown.hpp"
 
-int main() {
+int main(int argc, char** argv) {
     Params p;
+    bool show_help = false;
+    std::string error;
+    const std::vector<std::string> args(argv + 1, argv + argc);
+    if (!parseArgs(args, p, show_help, error)) {
+        std::cerr << "Error: " << error << "\nRun with --help to see the settings.\n";
+        return 2;
+    }
+    if (show_help) {
+        std::cout << usageText();
+        return 0;
+    }
+
     Lander lander(p);
     std::unique_ptr<Guidance> guidance;
     if (p.guidance == GuidanceType::LateBurn) {
@@ -22,7 +37,7 @@ int main() {
     DataLogger logger(p.output_file);
     if (!logger.isOpen()) {
         std::cerr << "Could not open " << p.output_file
-                  << " (does the data folder exist?)\n";
+                  << " (does the folder exist?)\n";
         return 1;
     }
 
@@ -39,6 +54,8 @@ int main() {
     const TouchdownResult r = evaluateTouchdown(previous, lander.state(), p);
 
     std::cout << std::fixed << std::setprecision(2);
+    std::cout << "guidance: " << (p.guidance == GuidanceType::LateBurn ? "late-burn" : "constant-decel")
+              << ", gravity " << p.gravity << " m/s^2\n";
     if (!r.landed) {
         std::cout << "Result: FAIL (did not touch down before max_time)\n";
     } else if (r.success) {
