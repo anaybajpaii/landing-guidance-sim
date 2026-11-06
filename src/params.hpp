@@ -43,4 +43,5 @@ struct Params {
     double dt = 0.01;
     double max_time = 300.0;
     std::string output_file = "data/run.csv";
+    std::string summary_file = "data/summary.csv";
 };

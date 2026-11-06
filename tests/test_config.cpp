@@ -37,6 +37,11 @@ void writeFile(const std::string& text) {
     file << text;
 }
 
+bool parse(const std::vector<std::string>& args, Params& p, bool& help, std::string& error) {
+    std::vector<std::string> runs;
+    return parseArgs(args, p, help, runs, error);
+}
+
 void testNumbers() {
     Params p;
     std::string error;
@@ -162,7 +167,7 @@ void testArgs() {
     std::string error;
 
     const std::vector<std::string> args = {"--gravity", "3.71", "--guidance=late-burn", "--init_vy", "-25"};
-    check(parseArgs(args, p, help, error), "args: valid flags are accepted");
+    check(parse(args, p, help, error), "args: valid flags are accepted");
     check(near(p.gravity, 3.71, 1e-12) && p.guidance == GuidanceType::LateBurn && near(p.init_vy, -25.0, 1e-12),
           "args: both --key value and --key=value forms work, including negatives");
     check(!help, "args: help is off unless asked for");
@@ -175,7 +180,7 @@ void testPrecedence() {
     bool help = false;
     std::string error;
     const std::vector<std::string> args = {"--gravity", "9.81", "--config", kTempFile};
-    check(parseArgs(args, p, help, error), "precedence: flags and a config file can be combined");
+    check(parse(args, p, help, error), "precedence: flags and a config file can be combined");
     check(near(p.gravity, 9.81, 1e-12), "precedence: a flag beats the file, even when it comes first");
     check(near(p.dt, 0.02, 1e-12), "precedence: the file beats the built-in default");
 }
@@ -186,27 +191,27 @@ void testArgErrors() {
 
     {
         Params p;
-        check(!parseArgs({"--gravity"}, p, help, error) && contains(error, "missing value"),
+        check(!parse({"--gravity"}, p, help, error) && contains(error, "missing value"),
               "arg error: a flag without a value is rejected");
     }
     {
         Params p;
-        check(!parseArgs({"gravity"}, p, help, error) && contains(error, "unexpected argument"),
+        check(!parse({"gravity"}, p, help, error) && contains(error, "unexpected argument"),
               "arg error: a bare word is rejected");
     }
     {
         Params p;
-        check(!parseArgs({"--gravty", "1"}, p, help, error) && contains(error, "unknown setting"),
+        check(!parse({"--gravty", "1"}, p, help, error) && contains(error, "unknown setting"),
               "arg error: an unknown flag is rejected");
     }
     {
         Params p;
-        check(!parseArgs({"--dt", "0"}, p, help, error) && contains(error, "dt"),
+        check(!parse({"--dt", "0"}, p, help, error) && contains(error, "dt"),
               "arg error: values are validated after parsing");
     }
     {
         Params p;
-        check(!parseArgs({"--config", "no_such_file.cfg"}, p, help, error) && contains(error, "cannot open"),
+        check(!parse({"--config", "no_such_file.cfg"}, p, help, error) && contains(error, "cannot open"),
               "arg error: a missing config file is reported");
     }
 }
@@ -215,12 +220,52 @@ void testHelp() {
     Params p;
     bool help = false;
     std::string error;
-    check(parseArgs({"--help"}, p, help, error) && help, "help: --help is recognised");
-    check(parseArgs({"-h"}, p, help, error) && help, "help: -h is recognised");
+    check(parse({"--help"}, p, help, error) && help, "help: --help is recognised");
+    check(parse({"-h"}, p, help, error) && help, "help: -h is recognised");
 
     const std::string text = usageText();
     check(contains(text, "--gravity") && contains(text, "--guidance") && contains(text, "--max_time"),
           "help: the usage text lists the settings");
+}
+
+void testRunSpec() {
+    Params p;
+    std::string error;
+
+    check(applyRunSpec(p, "kp_vert=4 guidance=late-burn  ki_vert=0.4", error), "run spec: several settings are applied");
+    check(near(p.kp_vert, 4.0, 1e-12) && near(p.ki_vert, 0.4, 1e-12) && p.guidance == GuidanceType::LateBurn,
+          "run spec: every setting takes effect");
+
+    Params blank;
+    check(applyRunSpec(blank, "   ", error) && near(blank.kp_vert, Params().kp_vert, 1e-12),
+          "run spec: a blank spec changes nothing");
+
+    Params bad;
+    check(!applyRunSpec(bad, "kp_vert", error) && contains(error, "expected key=value"),
+          "run spec: a word without = is rejected");
+    check(!applyRunSpec(bad, "=4", error), "run spec: a missing key is rejected");
+    check(!applyRunSpec(bad, "gravty=1", error) && contains(error, "unknown setting"),
+          "run spec: an unknown setting is rejected");
+    check(!applyRunSpec(bad, "dt=0", error) && contains(error, "dt"), "run spec: invalid values are rejected");
+}
+
+void testRunFlags() {
+    Params p;
+    bool help = false;
+    std::string error;
+    std::vector<std::string> runs;
+
+    const std::vector<std::string> args = {"--gravity", "3.71", "--run", "kp_vert=4 ki_vert=0.4",
+                                           "--run=guidance=late-burn", "--summary_file", "data/s.csv"};
+    check(parseArgs(args, p, help, runs, error), "run flags: --run can be repeated");
+    check(runs.size() == 2 && runs[0] == "kp_vert=4 ki_vert=0.4" && runs[1] == "guidance=late-burn",
+          "run flags: both the --run value and --run=value forms are collected");
+    check(near(p.gravity, 3.71, 1e-12) && near(p.kp_vert, Params().kp_vert, 1e-12),
+          "run flags: run settings are not applied to the base settings");
+    check(p.summary_file == "data/s.csv", "run flags: summary_file can be set");
+
+    check(!parseArgs({"--run"}, p, help, runs, error) && contains(error, "missing value"),
+          "run flags: --run without a value is rejected");
 }
 
 }
@@ -236,6 +281,8 @@ int main() {
     testPrecedence();
     testArgErrors();
     testHelp();
+    testRunSpec();
+    testRunFlags();
 
     std::remove(kTempFile);
 

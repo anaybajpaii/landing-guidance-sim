@@ -103,12 +103,16 @@ bool applySetting(Params& p, const std::string& key, const std::string& value, s
         return true;
     }
 
-    if (name == "output_file") {
+    if (name == "output_file" || name == "summary_file") {
         if (value.empty()) {
-            error = "output_file must not be empty";
+            error = name + " must not be empty";
             return false;
         }
-        p.output_file = value;
+        if (name == "output_file") {
+            p.output_file = value;
+        } else {
+            p.summary_file = value;
+        }
         return true;
     }
 
@@ -196,8 +200,26 @@ bool validate(const Params& p, std::string& error) {
     return true;
 }
 
-bool parseArgs(const std::vector<std::string>& args, Params& p, bool& show_help, std::string& error) {
+bool applyRunSpec(Params& p, const std::string& spec, std::string& error) {
+    std::istringstream words(spec);
+    std::string word;
+    while (words >> word) {
+        const std::size_t equals = word.find('=');
+        if (equals == std::string::npos || equals == 0) {
+            error = "expected key=value but got '" + word + "'";
+            return false;
+        }
+        if (!applySetting(p, word.substr(0, equals), word.substr(equals + 1), error)) {
+            return false;
+        }
+    }
+    return validate(p, error);
+}
+
+bool parseArgs(const std::vector<std::string>& args, Params& p, bool& show_help,
+               std::vector<std::string>& runs, std::string& error) {
     show_help = false;
+    runs.clear();
     std::vector<std::pair<std::string, std::string>> settings;
     std::string config_path;
 
@@ -228,6 +250,8 @@ bool parseArgs(const std::vector<std::string>& args, Params& p, bool& show_help,
 
         if (normalizeKey(key) == "config") {
             config_path = value;
+        } else if (normalizeKey(key) == "run") {
+            runs.push_back(value);
         } else {
             settings.emplace_back(key, value);
         }
@@ -250,12 +274,16 @@ bool parseArgs(const std::vector<std::string>& args, Params& p, bool& show_help,
 std::string usageText() {
     const Params defaults;
     std::ostringstream out;
-    out << "Usage: lander [--config FILE] [--setting value ...]\n\n";
+    out << "Usage: lander [--config FILE] [--setting value ...] [--run \"key=value ...\"]...\n\n";
     out << "Settings can go in a config file (key = value, one per line, # starts a comment)\n";
     out << "or on the command line (--key value or --key=value). Flags override the file,\n";
     out << "and the file overrides the built-in defaults.\n\n";
+    out << "Each --run \"key=value key=value\" is one extra simulation that changes those settings\n";
+    out << "on top of the rest. With --run, every run is saved as <output_file>_N.csv and a\n";
+    out << "comparison table is written to summary_file.\n\n";
     out << "  --guidance        constant-decel | late-burn (default constant-decel)\n";
     out << "  --output_file     CSV path (default " << defaults.output_file << ")\n";
+    out << "  --summary_file    summary CSV path (default " << defaults.summary_file << ")\n";
     for (const auto& entry : numericSettings()) {
         out << "  --" << entry.first << "  (default " << defaults.*(entry.second) << ")\n";
     }
