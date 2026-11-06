@@ -10,13 +10,14 @@ CTRL_TEST   = build/test_controller.exe
 TD_TEST     = build/test_touchdown.exe
 CFG_TEST    = build/test_config.exe
 RUN_TEST    = build/test_runner.exe
+SYS_TEST    = build/test_system.exe
 
 all: $(TARGET)
 
 $(TARGET): $(SRC) $(HDR)
 	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
 
-test: $(PHYS_TEST) $(GUIDE_TEST) $(PID_TEST) $(CTRL_TEST) $(TD_TEST) $(CFG_TEST) $(RUN_TEST)
+test: $(PHYS_TEST) $(GUIDE_TEST) $(PID_TEST) $(CTRL_TEST) $(TD_TEST) $(CFG_TEST) $(RUN_TEST) $(SYS_TEST)
 	./$(PHYS_TEST)
 	./$(GUIDE_TEST)
 	./$(PID_TEST)
@@ -24,6 +25,7 @@ test: $(PHYS_TEST) $(GUIDE_TEST) $(PID_TEST) $(CTRL_TEST) $(TD_TEST) $(CFG_TEST)
 	./$(TD_TEST)
 	./$(CFG_TEST)
 	./$(RUN_TEST)
+	./$(SYS_TEST)
 
 $(PHYS_TEST): tests/test_physics.cpp src/lander.cpp $(HDR)
 	$(CXX) $(CXXFLAGS) -Isrc tests/test_physics.cpp src/lander.cpp -o $(PHYS_TEST)
@@ -45,3 +47,6 @@ $(CFG_TEST): tests/test_config.cpp src/config.cpp $(HDR)
 
 $(RUN_TEST): tests/test_runner.cpp src/runner.cpp src/config.cpp src/lander.cpp src/logger.cpp src/guidance.cpp src/pid.cpp src/controller.cpp src/touchdown.cpp $(HDR)
 	$(CXX) $(CXXFLAGS) -Isrc tests/test_runner.cpp src/runner.cpp src/config.cpp src/lander.cpp src/logger.cpp src/guidance.cpp src/pid.cpp src/controller.cpp src/touchdown.cpp -o $(RUN_TEST)
+
+$(SYS_TEST): tests/test_system.cpp src/lander.cpp src/guidance.cpp src/pid.cpp src/controller.cpp src/touchdown.cpp $(HDR)
+	$(CXX) $(CXXFLAGS) -Isrc tests/test_system.cpp src/lander.cpp src/guidance.cpp src/pid.cpp src/controller.cpp src/touchdown.cpp -o $(SYS_TEST)
