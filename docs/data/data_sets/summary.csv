@@ -1,0 +1,5 @@
+run,label,guidance,kp_vert,ki_vert,kd_vert,landed,success,time,landing_speed,sideways_speed,miss_distance,fuel_used,csv_file
+1,kp_vert=1,constant-decel,1,0.2,0.1,1,1,30.725,0.995781,7.01887e-05,0.000456197,38.5328,data/run_1.csv
+2,kp_vert=2,constant-decel,2,0.2,0.1,1,1,31.0926,0.848384,4.80945e-05,4.14799e-05,38.8173,data/run_2.csv
+3,kp_vert=4 ki_vert=0.4,constant-decel,4,0.4,0.1,1,1,30.5163,0.925133,0.000121203,7.89887e-05,38.3794,data/run_3.csv
+4,kp_vert=8,constant-decel,8,0.2,0.1,1,1,30.8796,0.757645,0.000101572,7.12546e-05,38.6888,data/run_4.csv
