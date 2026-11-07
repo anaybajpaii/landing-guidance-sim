@@ -1,4 +1,4 @@
-# landing-guidance-sim
+# Landing Guidance Simulator
 
 A 2D powered-descent simulator in C++ that lands a lander on a pad using two interchangeable guidance laws and a PID controller, then lets you run several setups on the same scenario and compare them in plots.
 
@@ -155,15 +155,52 @@ The source files each test needs are listed in `scripts/run_tests.ps1` and the `
 ## Project structure
 
 ```
-src/        simulator: physics, guidance, PID, controller, touchdown, config, runner
-tests/      test programs
-scripts/    plot_run.py, plot_compare.py (plots) and run_tests.ps1 (build and run all tests)
-configs/    ready-made Moon and Mars settings
-docs/       guidance_notes.md and saved plots and data
-Makefile    build and test targets
+landing-guidance-sim/
+├── configs/
+│   ├── mars.cfg
+│   └── moon.cfg
+├── docs/
+│   ├── data/
+│   │   ├── data_sets/
+│   │   │   ├── run.csv
+│   │   │   ├── run_1.csv ... run_4.csv
+│   │   │   └── summary.csv
+│   │   └── screenshots/
+│   │       ├── compare.png
+│   │       ├── gain_sweep.png
+│   │       └── run.png
+│   └── guidance_notes.md
+├── scripts/
+│   ├── plot_compare.py
+│   ├── plot_run.py
+│   └── run_tests.ps1
+├── src/
+│   ├── config.cpp / config.hpp
+│   ├── controller.cpp / controller.hpp
+│   ├── guidance.cpp / guidance.hpp
+│   ├── lander.cpp / lander.hpp
+│   ├── logger.cpp / logger.hpp
+│   ├── main.cpp
+│   ├── params.hpp
+│   ├── pid.cpp / pid.hpp
+│   ├── runner.cpp / runner.hpp
+│   └── touchdown.cpp / touchdown.hpp
+├── tests/
+│   ├── test_config.cpp
+│   ├── test_controller.cpp
+│   ├── test_guidance.cpp
+│   ├── test_physics.cpp
+│   ├── test_pid.cpp
+│   ├── test_runner.cpp
+│   ├── test_system.cpp
+│   └── test_touchdown.cpp
+├── .gitignore
+├── LICENSE
+├── Makefile
+└── README.md
 ```
 
-`build/` and `data/` are created locally and ignored by git. `docs/data/data_sets/` holds saved output CSVs for reference.
+`build/` (compiled programs) and `data/` (CSVs from your own runs) are created locally and ignored by git. `docs/data/data_sets/` holds saved output CSVs for reference.
 
 ## Limitations
 
@@ -172,16 +209,6 @@ Makefile    build and test targets
 - The controller sees the exact state, with no sensor noise or delay.
 - Mass flow is exactly proportional to throttle.
 - The findings come from a small set of scenarios and describe this simulator, not guidance laws in general.
-
-## What's next
-
-Possible extensions to this project:
-
-- add rotational dynamics, so the tilt takes time to change
-- add sensor noise, then a state estimator
-- add a third guidance law and compare it with the other two
-
-Separate projects planned but not started: a pursuit-guidance simulator and a Kalman-filter navigation simulator.
 
 ## License
 
