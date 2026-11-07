@@ -4,6 +4,8 @@ Notes on how landing-guidance-sim works and what the experiments showed. Every n
 
 Default scenario: gravity 1.62 m/s^2, dry mass 1000 kg, fuel 300 kg, max thrust 6000 N, start 500 m up, 50 m sideways of the pad, descending at 40 m/s.
 
+Saved outputs behind the figures are in [`data/data_sets/`](data/data_sets/) and the images in [`data/screenshots/`](data/screenshots/).
+
 ## 1. Two layers
 
 The simulator separates two jobs:
@@ -25,6 +27,10 @@ dm/dt = -mdot_max * throttle
 ```
 
 The state is updated with semi-implicit Euler: velocity first, then position using the new velocity. The engine is either off or between `min_throttle` and full throttle, and `theta` is clamped to `max_tilt_deg`.
+
+With the engine off, the lander simply falls. From 500 m at 40 m/s downward it would hit the ground at `sqrt(40^2 + 2 * 1.62 * 500)`, about 56.7 m/s, and the plot below ends near 57 m/s.
+
+![Engine-off baseline](data/screenshots/run.png)
 
 ## 3. Guidance laws
 
@@ -94,11 +100,13 @@ Touchdown is found by linear interpolation between the last two steps, so the sp
 
 Late burn saves about 9.1 kg of fuel and 12.7 s. The same comparison on Mars settings (`--config configs/mars.cfg`) gives 65.48 kg versus 44.33 kg, and 30.98 s versus 17.53 s.
 
-A reasonable explanation, not tested separately: constant deceleration keeps the engine running for most of the descent, so a large part of the fuel goes into holding the lander up against gravity. Late burn spends most of the time falling for free and burns hard only at the end.
+A reasonable explanation, not tested separately: constant deceleration keeps the engine running for most of the descent, so a large part of the fuel goes into holding the lander up against gravity. Late burn spends the first seconds falling for free and then burns hard.
 
 The price is margin. Late burn lands at 1.71 m/s against the 2.0 m/s limit, and on Mars at 1.91 m/s. Constant decel lands at 0.85 m/s on the Moon and 0.88 m/s on Mars.
 
-![Guidance comparison](screenshots/guidance_comparison.png)
+The figure below overlays three runs: constant decel (1), late burn (2) and late burn starting 100 m off the pad (3, hatched, a failure, explained in 6.2). Runs 2 and 3 follow nearly the same path, so the green line hides the orange one.
+
+![Guidance comparison](data/screenshots/compare.png)
 
 ### 6.2 Late burn cannot steer from far off
 
@@ -157,7 +165,7 @@ All four succeed. Time and fuel drop steadily as the planned deceleration grows.
 
 All four succeed, within 0.6 s, 0.25 m/s and 0.5 kg of each other. Constant deceleration is a gentle target, so the controller has an easy job. The gains would matter more for a harsher target, as in 6.3.
 
-![Gain sweep](screenshots/gain_sweep.png)
+![Gain sweep](data/screenshots/gain_sweep.png)
 
 ### 6.6 Windup mattered
 
@@ -174,9 +182,13 @@ Late burn originally landed at 2.34 m/s, a failure. During the coast the engine 
 
 ## 8. Reproducing
 
+From the repo root, in PowerShell:
+
 ```powershell
 New-Item -ItemType Directory -Force build, data
 g++ -std=c++17 -Wall -Wextra src/main.cpp src/lander.cpp src/logger.cpp src/guidance.cpp src/pid.cpp src/controller.cpp src/touchdown.cpp src/config.cpp src/runner.cpp -o build/lander.exe
-./build/lander.exe --run "guidance=constant-decel" --run "guidance=late-burn"
-py scripts/plot_compare.py --save docs/screenshots/guidance_comparison.png
+./build/lander.exe --run "guidance=constant-decel" --run "guidance=late-burn" --run "guidance=late-burn init_x=100"
+py scripts/plot_compare.py --save docs/data/screenshots/compare.png
 ```
+
+The simulator writes its CSVs to `data/`, which git ignores. The copies kept in `docs/data/data_sets/` are saved outputs for reference.
